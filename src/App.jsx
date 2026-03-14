@@ -4,10 +4,11 @@ import { EncuestaTable } from '@/components/EncuestaTable'
 import { EncuestaForm } from '@/components/EncuestaForm'
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { ExportButton } from '@/components/ExportButton'
+import { Dashboard } from '@/components/Dashboard'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { supabase } from '@/lib/supabase'
-import { Plus } from 'lucide-react'
+import { Plus, BarChart3 } from 'lucide-react'
 
 export default function App() {
   const [encuestas, setEncuestas] = useState([])
@@ -18,6 +19,7 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState(null)
+  const [showDashboard, setShowDashboard] = useState(false)
 
   const showMessage = (text, type = 'default') => {
     setMessage({ text, type })
@@ -122,6 +124,10 @@ export default function App() {
           <h2 className="text-xl font-semibold">Listado de encuestas</h2>
           <div className="flex flex-wrap gap-2">
             <ExportButton data={encuestas} disabled={loading} />
+            <Button variant="outline" onClick={() => setShowDashboard(true)} className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Estadísticas
+            </Button>
             <Button onClick={handleNewEncuesta} className="gap-2">
               <Plus className="h-4 w-4" />
               Nueva Encuesta
@@ -163,6 +169,12 @@ export default function App() {
         nombre={deleteTarget?.nombre}
         onConfirm={handleDeleteConfirm}
         loading={deleting}
+      />
+
+      <Dashboard
+        encuestas={encuestas}
+        open={showDashboard}
+        onOpenChange={setShowDashboard}
       />
     </div>
   )
