@@ -43,7 +43,7 @@ export const P8_AREAS_FORMACION = [
   'Matemáticas',
   'Ciencias políticas',
   'Defensa seguridad/fuerzas',
-  'Artes',
+  'Tics',
   'Deportes',
   'Artes-diseño',
   'Agricultura',
@@ -87,6 +87,8 @@ export const P20_CONCEPTOS_AYUDA = [
   'Motivación y disciplina',
   'Autoconocimiento',
   'Factor económico',
+  'A y B',
+  'A y C',
 ]
 
 // P26 - Obstáculo Principal (CHECKBOXES - múltiple)
