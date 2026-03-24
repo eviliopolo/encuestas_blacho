@@ -4,10 +4,12 @@ import { EncuestaTable } from '@/components/EncuestaTable'
 import { EncuestaForm } from '@/components/EncuestaForm'
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { ExportButton } from '@/components/ExportButton'
+import { ImportExcelButton } from '@/components/ImportExcelButton'
 import { Dashboard } from '@/components/Dashboard'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { supabase } from '@/lib/supabase'
+import { fetchAllEncuestas } from '@/utils/fetchAllEncuestas'
 import { Plus, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -23,15 +25,13 @@ export default function App() {
 
   const showMessage = (text, type = 'default') => {
     setMessage({ text, type })
-    setTimeout(() => setMessage(null), 5000)
+    const ms = type === 'destructive' ? 60000 : 5000
+    setTimeout(() => setMessage(null), ms)
   }
 
   const fetchEncuestas = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('encuestas_orientacion')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data, error } = await fetchAllEncuestas()
     if (error) {
       showMessage('Error al cargar encuestas: ' + error.message, 'destructive')
       setEncuestas([])
@@ -124,6 +124,11 @@ export default function App() {
           <h2 className="text-xl font-semibold">Listado de encuestas</h2>
           <div className="flex flex-wrap gap-2">
             <ExportButton data={encuestas} disabled={loading} />
+            <ImportExcelButton
+              onSuccess={fetchEncuestas}
+              onMessage={showMessage}
+              disabled={loading}
+            />
             <Button variant="outline" onClick={() => setShowDashboard(true)} className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Estadísticas
