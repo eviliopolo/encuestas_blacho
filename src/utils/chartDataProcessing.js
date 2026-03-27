@@ -3,13 +3,16 @@
  * Maneja respuestas múltiples (separadas por comas) correctamente.
  */
 
+import { P17_NIVEL_EDUCATIVO } from '@/lib/constants'
+
 /**
  * Cuenta opciones en un campo que puede tener múltiples valores separados por comas.
  * @param {Array} data - Array de filas de encuestas
  * @param {string} campo - Nombre del campo (ej: 'p6_tipo_carrera')
- * @returns {Array<{name: string, value: number}>} Formato para Recharts, ordenado de mayor a menor
+ * @param {string[] | null} ordenOpciones - Si se pasa, mantiene ese orden (p. ej. opciones del formulario).
+ * @returns {Array<{name: string, value: number}>} Formato para Recharts
  */
-export const contarOpcionesMultiples = (data, campo) => {
+export const contarOpcionesMultiples = (data, campo, ordenOpciones = null) => {
   const conteo = {}
   data.forEach((row) => {
     const valor = row[campo]
@@ -23,6 +26,12 @@ export const contarOpcionesMultiples = (data, campo) => {
       })
     }
   })
+  if (Array.isArray(ordenOpciones) && ordenOpciones.length > 0) {
+    return ordenOpciones.map((name) => ({
+      name,
+      value: conteo[name] || 0,
+    }))
+  }
   return Object.entries(conteo)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
@@ -148,15 +157,16 @@ export const topNOpcionesMultiples = (data, campo, n = 10) => {
 
 /**
  * Datos para gráfica de nivel educativo padre vs madre (series agrupadas).
+ * Orden de categorías: el mismo que en el formulario (P17).
  */
 export const nivelEducativoPadres = (data) => {
-  const padre = contarOpcionesMultiples(data, 'p17_padre_nivel_educativo')
-  const madre = contarOpcionesMultiples(data, 'p17_madre_nivel_educativo')
-  const categorias = [...new Set([...padre.map((p) => p.name), ...madre.map((m) => m.name)])]
-  return categorias.map((cat) => ({
+  const orden = P17_NIVEL_EDUCATIVO
+  const padre = contarOpcionesMultiples(data, 'p17_padre_nivel_educativo', orden)
+  const madre = contarOpcionesMultiples(data, 'p17_madre_nivel_educativo', orden)
+  return orden.map((cat, i) => ({
     name: cat,
-    Padre: padre.find((p) => p.name === cat)?.value ?? 0,
-    Madre: madre.find((m) => m.name === cat)?.value ?? 0,
+    Padre: padre[i]?.value ?? 0,
+    Madre: madre[i]?.value ?? 0,
   }))
 }
 
@@ -182,7 +192,7 @@ export const indicadoresMotivacion = (data) => {
  */
 export const distribucionPregunta = (data, campo, { multiple = false, opciones = null } = {}) => {
   const base = multiple
-    ? contarOpcionesMultiples(data, campo)
+    ? contarOpcionesMultiples(data, campo, opciones)
     : contarRespuestasUnicas(data, campo, opciones)
 
   const total = multiple

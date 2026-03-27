@@ -61,6 +61,46 @@ const PIE_COLORS_BY_NAME = {
 
 const defaultFiltros = { ied: '', curso: '' }
 
+/** Orden de presentación: igual al cuestionario (P1 → P33), luego IED. */
+const ORDEN_GRAFICOS = [
+  { kind: 'sino', key: 'p1_continuar_formacion', title: 'P1 - Continuar formación después del bachillerato' },
+  { kind: 'sino', key: 'p2_info_edsuperior_colegio', title: 'P2 - Información sobre educación superior en el colegio' },
+  { kind: 'sino', key: 'p3_orientacion_edsuperior_casa', title: 'P3 - Orientación sobre educación superior en casa' },
+  { kind: 'sino', key: 'p4_orientacion_postbachillerato', title: 'P4 - Orientación post-bachillerato' },
+  { kind: 'sino', key: 'p5_conoce_programas_academicos', title: 'P5 - Conocimiento de programas académicos' },
+  { kind: 'multiple', key: 'p6_tipo_carrera', title: 'P6 - Tipo de carrera preferida' },
+  { kind: 'multiple', key: 'p7_area_mayor_destreza', title: 'P7 - Área de mayor destreza' },
+  { kind: 'multiple', key: 'p8_areas_formacion', title: 'P8 - Áreas de formación de interés' },
+  { kind: 'sino', key: 'p9_importante_continuar_estudios', title: 'P9 - Importancia de continuar estudios' },
+  { kind: 'multiple', key: 'p10_despues_bachillerato', title: 'P10 - Planes después del bachillerato' },
+  { kind: 'multiple', key: 'p11_herramientas_vocacion', title: 'P11 - Herramientas vocacionales brindadas' },
+  { kind: 'sino', key: 'p12_confianza_capacidades', title: 'P12 - Confianza en capacidades' },
+  { kind: 'sino', key: 'p13_motivacion_familia', title: 'P13 - Motivación familiar' },
+  { kind: 'multiple', key: 'p14_apoyo_padres_orientacion', title: 'P14 - Apoyo familiar en orientación' },
+  { kind: 'sino', key: 'p15_apoyo_familia_carrera', title: 'P15 - Apoyo familiar a la carrera' },
+  { kind: 'sino', key: 'p16_motivado_futuro', title: 'P16 - Motivación por el futuro' },
+  { kind: 'p17', key: 'p17', title: 'P17 - Nivel educativo de padres' },
+  { kind: 'multiple', key: 'p18_expresion_familiar', title: 'P18 - Expresión familiar' },
+  { kind: 'sino', key: 'p19a_conoce_autoconocimiento', title: 'P19a - Conoce autoconocimiento' },
+  { kind: 'sino', key: 'p19b_conoce_educacion_superior', title: 'P19b - Conoce educación superior' },
+  { kind: 'sino', key: 'p19c_conoce_mundo_laboral', title: 'P19c - Conoce mundo laboral' },
+  { kind: 'multiple', key: 'p20_conceptos_ayuda_formacion', title: 'P20 - Conceptos de ayuda para formación' },
+  { kind: 'sino', key: 'p21_estudiar_fuera_barranquilla', title: 'P21 - Estudiar fuera de Barranquilla' },
+  { kind: 'sino', key: 'p22_ejemplo_inspiracion', title: 'P22 - Tiene ejemplo o inspiración' },
+  { kind: 'sino', key: 'p23_factor_economico_importante', title: 'P23 - Factor económico importante' },
+  { kind: 'sino', key: 'p24_redes_sociales_influyen', title: 'P24 - Redes sociales influyen' },
+  { kind: 'p25', key: 'p25', title: 'P25 - Frases (Sí / No / Sin respuesta)' },
+  { kind: 'multiple', key: 'p26_obstaculo_principal', title: 'P26 - Obstáculo principal' },
+  { kind: 'sino', key: 'p27_institucion_identificada', title: 'P27 - Institución identificada' },
+  { kind: 'sino', key: 'p28_info_becas_programas', title: 'P28 - Información sobre becas y programas' },
+  { kind: 'sino', key: 'p29_abandono_colegio', title: 'P29 - Ha pensado abandonar el colegio' },
+  { kind: 'sino', key: 'p30_conoce_opciones_laborales', title: 'P30 - Conoce opciones laborales' },
+  { kind: 'sino', key: 'p31_conoce_tipos_contrato', title: 'P31 - Conoce tipos de contrato' },
+  { kind: 'sino', key: 'p32_conoce_entrevista_trabajo', title: 'P32 - Conoce entrevista de trabajo' },
+  { kind: 'sino', key: 'p33_sabe_hoja_vida', title: 'P33 - Sabe elaborar hoja de vida' },
+  { kind: 'ied', key: 'ied', title: 'Distribución por IED' },
+]
+
 export function Dashboard({ encuestas = [], open, onOpenChange }) {
   const [filtros, setFiltros] = useState(defaultFiltros)
   const dashboardRef = useRef(null)
@@ -130,48 +170,9 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
 
   const chartHeight = 300
 
-  const preguntasSiNo = [
-    ['p1_continuar_formacion', 'P1 - Continuar formación después del bachillerato'],
-    ['p2_info_edsuperior_colegio', 'P2 - Información sobre educación superior en el colegio'],
-    ['p3_orientacion_edsuperior_casa', 'P3 - Orientación sobre educación superior en casa'],
-    ['p4_orientacion_postbachillerato', 'P4 - Orientación post-bachillerato'],
-    ['p5_conoce_programas_academicos', 'P5 - Conocimiento de programas académicos'],
-    ['p9_importante_continuar_estudios', 'P9 - Importancia de continuar estudios'],
-    ['p12_confianza_capacidades', 'P12 - Confianza en capacidades'],
-    ['p13_motivacion_familia', 'P13 - Motivación familiar'],
-    ['p15_apoyo_familia_carrera', 'P15 - Apoyo familiar a la carrera'],
-    ['p16_motivado_futuro', 'P16 - Motivación por el futuro'],
-    ['p19a_conoce_autoconocimiento', 'P19a - Conoce autoconocimiento'],
-    ['p19b_conoce_educacion_superior', 'P19b - Conoce educación superior'],
-    ['p19c_conoce_mundo_laboral', 'P19c - Conoce mundo laboral'],
-    ['p21_estudiar_fuera_barranquilla', 'P21 - Estudiar fuera de Barranquilla'],
-    ['p22_ejemplo_inspiracion', 'P22 - Tiene ejemplo o inspiración'],
-    ['p23_factor_economico_importante', 'P23 - Factor económico importante'],
-    ['p24_redes_sociales_influyen', 'P24 - Redes sociales influyen'],
-    ['p27_institucion_identificada', 'P27 - Institución identificada'],
-    ['p28_info_becas_programas', 'P28 - Información sobre becas y programas'],
-    ['p29_abandono_colegio', 'P29 - Ha pensado abandonar el colegio'],
-    ['p30_conoce_opciones_laborales', 'P30 - Conoce opciones laborales'],
-    ['p31_conoce_tipos_contrato', 'P31 - Conoce tipos de contrato'],
-    ['p32_conoce_entrevista_trabajo', 'P32 - Conoce entrevista de trabajo'],
-    ['p33_sabe_hoja_vida', 'P33 - Sabe elaborar hoja de vida'],
-  ]
-
-  const preguntasMultiples = [
-    ['p6_tipo_carrera', 'P6 - Tipo de carrera preferida'],
-    ['p7_area_mayor_destreza', 'P7 - Área de mayor destreza'],
-    ['p8_areas_formacion', 'P8 - Áreas de formación de interés'],
-    ['p10_despues_bachillerato', 'P10 - Planes después del bachillerato'],
-    ['p11_herramientas_vocacion', 'P11 - Herramientas vocacionales brindadas'],
-    ['p14_apoyo_padres_orientacion', 'P14 - Apoyo familiar en orientación'],
-    ['p18_expresion_familiar', 'P18 - Expresión familiar'],
-    ['p20_conceptos_ayuda_formacion', 'P20 - Conceptos de ayuda para formación'],
-    ['p26_obstaculo_principal', 'P26 - Obstáculo principal'],
-  ]
-
   const dataSiNo = useMemo(() => {
     const result = {}
-    preguntasSiNo.forEach(([key]) => {
+    ORDEN_GRAFICOS.filter((g) => g.kind === 'sino').forEach(({ key }) => {
       result[key] = distribucionPregunta(encuestasFiltradas, key, {
         opciones: ['Sí', 'No', 'Sin respuesta'],
       })
@@ -181,7 +182,7 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
 
   const dataMultiples = useMemo(() => {
     const result = {}
-    preguntasMultiples.forEach(([key]) => {
+    ORDEN_GRAFICOS.filter((g) => g.kind === 'multiple').forEach(({ key }) => {
       result[key] = distribucionPregunta(encuestasFiltradas, key, {
         multiple: true,
         opciones: CHECKBOX_OPTIONS[key] || null,
@@ -272,7 +273,7 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
       <BarChart data={data} layout="vertical" margin={{ left: 20, right: 20 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis type="number" />
-        <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11 }} />
+        <YAxis type="category" dataKey="name" width={170} tick={{ fontSize: 11 }} reversed />
         <Tooltip formatter={(value, _, item) => [`${value} (${item.payload.percentage}%)`, unit]} />
         <Bar dataKey="value" name={unit} fill="#366092" radius={[0, 4, 4, 0]} />
       </BarChart>
@@ -360,60 +361,75 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
             </Card>
           </div>
 
-          {/* Gráficas por pregunta */}
+          {/* Gráficas por pregunta (orden P1 → P33, luego IED) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {preguntasSiNo.map(([key, label]) => (
-              <ChartCard key={key} title={label}>
-                {renderPieSiNo(dataSiNo[key] || [])}
-              </ChartCard>
-            ))}
-
-            {preguntasMultiples.map(([key, label]) => (
-              <ChartCard key={key} title={label}>
-                {renderBarrasHorizontales(dataMultiples[key] || [], 'Selecciones')}
-              </ChartCard>
-            ))}
-
-            <ChartCard title="P17 - Nivel educativo de padres">
-              <ResponsiveContainer width="100%" height={chartHeight}>
-                <BarChart data={dataP17} margin={{ bottom: 40 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Padre" name="Padre" fill="#366092" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Madre" name="Madre" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="P25 - Frases (Sí / No / Sin respuesta)">
-              <ResponsiveContainer width="100%" height={chartHeight}>
-                <BarChart data={dataP25} margin={{ left: 20, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="si" stackId="a" name="Sí" fill="#10B981" />
-                  <Bar dataKey="no" stackId="a" name="No" fill="#EF4444" />
-                  <Bar dataKey="sinRespuesta" stackId="a" name="Sin respuesta" fill="#94A3B8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-
-            <ChartCard title="Distribución por IED">
-              <ResponsiveContainer width="100%" height={chartHeight}>
-                <BarChart data={dataPorIED} margin={{ bottom: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" name="Encuestas" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
+            {ORDEN_GRAFICOS.map((item) => {
+              if (item.kind === 'sino') {
+                return (
+                  <ChartCard key={item.key} title={item.title}>
+                    {renderPieSiNo(dataSiNo[item.key] || [])}
+                  </ChartCard>
+                )
+              }
+              if (item.kind === 'multiple') {
+                return (
+                  <ChartCard key={item.key} title={item.title}>
+                    {renderBarrasHorizontales(dataMultiples[item.key] || [], 'Selecciones')}
+                  </ChartCard>
+                )
+              }
+              if (item.kind === 'p17') {
+                return (
+                  <ChartCard key={item.key} title={item.title}>
+                    <ResponsiveContainer width="100%" height={chartHeight}>
+                      <BarChart data={dataP17} margin={{ bottom: 40 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="Padre" name="Padre" fill="#366092" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="Madre" name="Madre" fill="#EC4899" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )
+              }
+              if (item.kind === 'p25') {
+                return (
+                  <ChartCard key={item.key} title={item.title}>
+                    <ResponsiveContainer width="100%" height={chartHeight}>
+                      <BarChart data={dataP25} margin={{ left: 20, right: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="si" stackId="a" name="Sí" fill="#10B981" />
+                        <Bar dataKey="no" stackId="a" name="No" fill="#EF4444" />
+                        <Bar dataKey="sinRespuesta" stackId="a" name="Sin respuesta" fill="#94A3B8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )
+              }
+              if (item.kind === 'ied') {
+                return (
+                  <ChartCard key={item.key} title={item.title}>
+                    <ResponsiveContainer width="100%" height={chartHeight}>
+                      <BarChart data={dataPorIED} margin={{ bottom: 80 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 10 }} />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" name="Encuestas" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartCard>
+                )
+              }
+              return null
+            })}
           </div>
         </div>
       </DialogContent>
