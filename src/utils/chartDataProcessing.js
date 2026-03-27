@@ -29,6 +29,30 @@ export const contarOpcionesMultiples = (data, campo) => {
 }
 
 /**
+ * Cuenta respuestas de una pregunta de selección única.
+ * Si se pasan opciones, las respeta y mantiene el orden.
+ */
+export const contarRespuestasUnicas = (data, campo, opciones = null) => {
+  const conteo = {}
+  data.forEach((row) => {
+    const valor = row[campo]
+    const key = valor != null && valor !== '' ? String(valor).trim() : 'Sin respuesta'
+    conteo[key] = (conteo[key] || 0) + 1
+  })
+
+  if (Array.isArray(opciones) && opciones.length > 0) {
+    return opciones.map((opt) => ({
+      name: opt,
+      value: conteo[opt] || 0,
+    }))
+  }
+
+  return Object.entries(conteo)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+}
+
+/**
  * Calcula el porcentaje de respuestas "Sí" en un campo.
  */
 export const calcularPorcentajeSi = (data, campo) => {
@@ -151,4 +175,34 @@ export const indicadoresMotivacion = (data) => {
     name: label,
     value: calcularPorcentajeSi(data, key),
   })).sort((a, b) => b.value - a.value)
+}
+
+/**
+ * Calcula distribución para una pregunta y añade porcentaje.
+ */
+export const distribucionPregunta = (data, campo, { multiple = false, opciones = null } = {}) => {
+  const base = multiple
+    ? contarOpcionesMultiples(data, campo)
+    : contarRespuestasUnicas(data, campo, opciones)
+
+  const total = multiple
+    ? base.reduce((acc, item) => acc + item.value, 0)
+    : data.length
+
+  return base.map((item) => ({
+    ...item,
+    percentage: total > 0 ? Number(((item.value / total) * 100).toFixed(1)) : 0,
+  }))
+}
+
+/**
+ * Serie por enunciado para preguntas con varias frases Sí/No.
+ */
+export const serieSiNoPorItems = (data, items = []) => {
+  return items.map(({ key, label }) => {
+    const si = data.filter((row) => row[key] === 'Sí').length
+    const no = data.filter((row) => row[key] === 'No').length
+    const sinRespuesta = data.length - si - no
+    return { name: label, si, no, sinRespuesta }
+  })
 }
