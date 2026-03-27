@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -41,6 +42,7 @@ import {
 import { CHECKBOX_OPTIONS } from '@/lib/constants'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
+import { X } from 'lucide-react'
 
 const COLORS = [
   '#366092',
@@ -289,9 +291,22 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
         <DialogHeader>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <DialogTitle>Dashboard de Estadísticas</DialogTitle>
-            <Button variant="outline" size="sm" onClick={exportarPDF}>
-              Exportar Dashboard como PDF
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={exportarPDF}>
+                Exportar Dashboard como PDF
+              </Button>
+              <DialogClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Cerrar dashboard de gráficos"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </DialogClose>
+            </div>
           </div>
         </DialogHeader>
 
