@@ -103,8 +103,97 @@ const ORDEN_GRAFICOS = [
   { kind: 'ied', key: 'ied', title: 'Distribución por IED' },
 ]
 
+const CANVAS_MAX_EDGE = 16000
+const PDF_MARGIN_MM = 10
+const PDF_GAP_MM = 3
+/** Una sola captura puede tardar; varias decenas de html2canvas seguidas cuelgan o parecen infinitas. */
+const HTML2CANVAS_TIMEOUT_MS = 120000
+
+/** Quita recortes del modal en el documento clonado para que html2canvas pinte todo el scroll. */
+function expandirAncestrosParaCaptura(node) {
+  let el = node?.parentElement
+  while (el) {
+    el.style.overflow = 'visible'
+    el.style.maxHeight = 'none'
+    el.style.height = 'auto'
+    el = el.parentElement
+  }
+}
+
+function rectLayoutEnContenedor(contenedor, bloque) {
+  const cr = contenedor.getBoundingClientRect()
+  const br = bloque.getBoundingClientRect()
+  return {
+    top: br.top - cr.top + contenedor.scrollTop,
+    left: br.left - cr.left + contenedor.scrollLeft,
+    width: br.width,
+    height: br.height,
+  }
+}
+
+function recortarDeCanvas(fuente, sx, sy, sw, sh) {
+  const w = Math.max(1, Math.round(sw))
+  const h = Math.max(1, Math.round(sh))
+  const out = document.createElement('canvas')
+  out.width = w
+  out.height = h
+  const ctx = out.getContext('2d')
+  ctx.drawImage(fuente, Math.round(sx), Math.round(sy), w, h, 0, 0, w, h)
+  return out
+}
+
+function conTimeout(promise, ms, mensaje) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(mensaje)), ms)
+    }),
+  ])
+}
+
+/**
+ * Vuelca recortes al PDF: apila en la misma página si caben; salto de página solo entre bloques.
+ */
+function volcarRecortesAlPdf(pdf, canvases) {
+  const pageW = pdf.internal.pageSize.getWidth()
+  const pageH = pdf.internal.pageSize.getHeight()
+  const innerW = pageW - 2 * PDF_MARGIN_MM
+  const innerH = pageH - 2 * PDF_MARGIN_MM
+
+  let yCursor = PDF_MARGIN_MM
+  let primeraEnPagina = true
+
+  for (const c of canvases) {
+    if (c.width < 1 || c.height < 1) continue
+    const imgData = c.toDataURL('image/png')
+
+    let drawW = innerW
+    let drawH = (c.height * drawW) / c.width
+    if (drawH > innerH) {
+      const s = innerH / drawH
+      drawH = innerH
+      drawW = drawW * s
+    }
+
+    const necesitaNuevaPagina =
+      !primeraEnPagina && yCursor + drawH > PDF_MARGIN_MM + innerH
+
+    if (necesitaNuevaPagina) {
+      pdf.addPage()
+      yCursor = PDF_MARGIN_MM
+      primeraEnPagina = true
+    }
+
+    const x = PDF_MARGIN_MM + (innerW - drawW) / 2
+    pdf.addImage(imgData, 'PNG', x, yCursor, drawW, drawH)
+    yCursor += drawH + PDF_GAP_MM
+    primeraEnPagina = false
+  }
+}
+
 export function Dashboard({ encuestas = [], open, onOpenChange }) {
   const [filtros, setFiltros] = useState(defaultFiltros)
+  const [exportandoPdf, setExportandoPdf] = useState(false)
   const dashboardRef = useRef(null)
 
   const encuestasFiltradas = useMemo(
@@ -152,21 +241,67 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
   const limpiarFiltros = () => setFiltros(defaultFiltros)
 
   const exportarPDF = async () => {
-    if (!dashboardRef.current) return
+    const el = dashboardRef.current
+    if (!el) return
+    setExportandoPdf(true)
     try {
-      const canvas = await html2canvas(dashboardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const scrollHost = el.closest('[data-radix-scroll-area-viewport]') || el.parentElement
+      const prevScrollTop = scrollHost?.scrollTop ?? 0
+      if (scrollHost) scrollHost.scrollTop = 0
+
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+      const bloques = [...el.querySelectorAll('.dashboard-pdf-block')]
+      const rectsDom = bloques.map((b) => rectLayoutEnContenedor(el, b))
+
+      const sh = el.scrollHeight
+      const sw = el.scrollWidth
+      let scale = 2
+      while (scale > 0.5 && (sh * scale > CANVAS_MAX_EDGE || sw * scale > CANVAS_MAX_EDGE)) {
+        scale -= 0.25
+      }
+
+      const canvasCompleto = await conTimeout(
+        html2canvas(el, {
+          scale,
+          useCORS: true,
+          logging: false,
+          onclone: (clonedDoc) => {
+            const cloned = clonedDoc.getElementById('dashboard-content')
+            if (cloned) expandirAncestrosParaCaptura(cloned)
+          },
+        }),
+        HTML2CANVAS_TIMEOUT_MS,
+        'La captura del dashboard tardó demasiado. Prueba cerrar otros programas o reducir filtros.'
+      )
+
+      const sxScale = canvasCompleto.width / Math.max(1, sw)
+      const syScale = canvasCompleto.height / Math.max(1, sh)
+
+      const recortes = rectsDom.map((r) => {
+        let sx = r.left * sxScale
+        let sy = r.top * syScale
+        let swPx = r.width * sxScale
+        let shPx = r.height * syScale
+        sx = Math.max(0, Math.min(sx, canvasCompleto.width - 1))
+        sy = Math.max(0, Math.min(sy, canvasCompleto.height - 1))
+        swPx = Math.min(swPx, canvasCompleto.width - sx)
+        shPx = Math.min(shPx, canvasCompleto.height - sy)
+        return recortarDeCanvas(canvasCompleto, sx, sy, swPx, shPx)
       })
-      const imgData = canvas.toDataURL('image/png')
+
       const pdf = new jsPDF('p', 'mm', 'a4')
-      const width = pdf.internal.pageSize.getWidth()
-      const height = (canvas.height * width) / canvas.width
-      pdf.addImage(imgData, 'PNG', 0, 0, width, height)
+      volcarRecortesAlPdf(pdf, recortes)
       pdf.save(`dashboard_${new Date().toISOString().split('T')[0]}.pdf`)
+
+      if (scrollHost) scrollHost.scrollTop = prevScrollTop
     } catch (err) {
       console.error('Error al exportar PDF:', err)
+      window.alert(
+        err instanceof Error ? err.message : 'No se pudo generar el PDF. Inténtalo de nuevo.'
+      )
+    } finally {
+      setExportandoPdf(false)
     }
   }
 
@@ -292,8 +427,13 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <DialogTitle>Dashboard de Estadísticas</DialogTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" onClick={exportarPDF}>
-                Exportar Dashboard como PDF
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportarPDF}
+                disabled={exportandoPdf}
+              >
+                {exportandoPdf ? 'Generando PDF…' : 'Exportar Dashboard como PDF'}
               </Button>
               <DialogClose asChild>
                 <Button
@@ -312,6 +452,7 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
 
         <div ref={dashboardRef} id="dashboard-content" className="space-y-6">
           {/* Filtros */}
+          <div className="dashboard-pdf-block">
           <Card>
             <CardContent className="pt-4">
               <div className="flex flex-wrap items-end gap-4">
@@ -359,9 +500,10 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
               </div>
             </CardContent>
           </Card>
+          </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+          <div className="dashboard-pdf-block grid grid-cols-2 md:grid-cols-2 gap-4">
             <Card>
               <CardContent className="pt-4">
                 <p className="text-xs text-muted-foreground">Total encuestas</p>
