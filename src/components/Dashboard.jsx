@@ -7,7 +7,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -41,7 +40,8 @@ import {
 } from '@/utils/chartDataProcessing'
 import { CHECKBOX_OPTIONS } from '@/lib/constants'
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import { generarRecortesDashboard } from '@/utils/dashboardChartCapture'
+import { exportDashboardRecortesToPptx } from '@/utils/exportDashboardPptx'
 import { X } from 'lucide-react'
 
 const COLORS = [
@@ -103,53 +103,8 @@ const ORDEN_GRAFICOS = [
   { kind: 'ied', key: 'ied', title: 'Distribución por IED' },
 ]
 
-const CANVAS_MAX_EDGE = 16000
 const PDF_MARGIN_MM = 10
 const PDF_GAP_MM = 3
-/** Una sola captura puede tardar; varias decenas de html2canvas seguidas cuelgan o parecen infinitas. */
-const HTML2CANVAS_TIMEOUT_MS = 120000
-
-/** Quita recortes del modal en el documento clonado para que html2canvas pinte todo el scroll. */
-function expandirAncestrosParaCaptura(node) {
-  let el = node?.parentElement
-  while (el) {
-    el.style.overflow = 'visible'
-    el.style.maxHeight = 'none'
-    el.style.height = 'auto'
-    el = el.parentElement
-  }
-}
-
-function rectLayoutEnContenedor(contenedor, bloque) {
-  const cr = contenedor.getBoundingClientRect()
-  const br = bloque.getBoundingClientRect()
-  return {
-    top: br.top - cr.top + contenedor.scrollTop,
-    left: br.left - cr.left + contenedor.scrollLeft,
-    width: br.width,
-    height: br.height,
-  }
-}
-
-function recortarDeCanvas(fuente, sx, sy, sw, sh) {
-  const w = Math.max(1, Math.round(sw))
-  const h = Math.max(1, Math.round(sh))
-  const out = document.createElement('canvas')
-  out.width = w
-  out.height = h
-  const ctx = out.getContext('2d')
-  ctx.drawImage(fuente, Math.round(sx), Math.round(sy), w, h, 0, 0, w, h)
-  return out
-}
-
-function conTimeout(promise, ms, mensaje) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(mensaje)), ms)
-    }),
-  ])
-}
 
 /**
  * Vuelca recortes al PDF: apila en la misma página si caben; salto de página solo entre bloques.
@@ -191,9 +146,17 @@ function volcarRecortesAlPdf(pdf, canvases) {
   }
 }
 
+async function prepararScrollCapturaDashboard(el) {
+  const scrollHost = el.closest('[data-radix-scroll-area-viewport]') || el.parentElement
+  const prevScrollTop = scrollHost?.scrollTop ?? 0
+  if (scrollHost) scrollHost.scrollTop = 0
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+  return { scrollHost, prevScrollTop }
+}
+
 export function Dashboard({ encuestas = [], open, onOpenChange }) {
   const [filtros, setFiltros] = useState(defaultFiltros)
-  const [exportandoPdf, setExportandoPdf] = useState(false)
+  const [exportando, setExportando] = useState(null)
   const dashboardRef = useRef(null)
 
   const encuestasFiltradas = useMemo(
@@ -243,65 +206,41 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
   const exportarPDF = async () => {
     const el = dashboardRef.current
     if (!el) return
-    setExportandoPdf(true)
+    setExportando('pdf')
+    const { scrollHost, prevScrollTop } = await prepararScrollCapturaDashboard(el)
     try {
-      const scrollHost = el.closest('[data-radix-scroll-area-viewport]') || el.parentElement
-      const prevScrollTop = scrollHost?.scrollTop ?? 0
-      if (scrollHost) scrollHost.scrollTop = 0
-
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-
-      const bloques = [...el.querySelectorAll('.dashboard-pdf-block')]
-      const rectsDom = bloques.map((b) => rectLayoutEnContenedor(el, b))
-
-      const sh = el.scrollHeight
-      const sw = el.scrollWidth
-      let scale = 2
-      while (scale > 0.5 && (sh * scale > CANVAS_MAX_EDGE || sw * scale > CANVAS_MAX_EDGE)) {
-        scale -= 0.25
-      }
-
-      const canvasCompleto = await conTimeout(
-        html2canvas(el, {
-          scale,
-          useCORS: true,
-          logging: false,
-          onclone: (clonedDoc) => {
-            const cloned = clonedDoc.getElementById('dashboard-content')
-            if (cloned) expandirAncestrosParaCaptura(cloned)
-          },
-        }),
-        HTML2CANVAS_TIMEOUT_MS,
-        'La captura del dashboard tardó demasiado. Prueba cerrar otros programas o reducir filtros.'
-      )
-
-      const sxScale = canvasCompleto.width / Math.max(1, sw)
-      const syScale = canvasCompleto.height / Math.max(1, sh)
-
-      const recortes = rectsDom.map((r) => {
-        let sx = r.left * sxScale
-        let sy = r.top * syScale
-        let swPx = r.width * sxScale
-        let shPx = r.height * syScale
-        sx = Math.max(0, Math.min(sx, canvasCompleto.width - 1))
-        sy = Math.max(0, Math.min(sy, canvasCompleto.height - 1))
-        swPx = Math.min(swPx, canvasCompleto.width - sx)
-        shPx = Math.min(shPx, canvasCompleto.height - sy)
-        return recortarDeCanvas(canvasCompleto, sx, sy, swPx, shPx)
-      })
-
+      const recortes = await generarRecortesDashboard(el)
       const pdf = new jsPDF('p', 'mm', 'a4')
       volcarRecortesAlPdf(pdf, recortes)
       pdf.save(`dashboard_${new Date().toISOString().split('T')[0]}.pdf`)
-
-      if (scrollHost) scrollHost.scrollTop = prevScrollTop
     } catch (err) {
       console.error('Error al exportar PDF:', err)
       window.alert(
         err instanceof Error ? err.message : 'No se pudo generar el PDF. Inténtalo de nuevo.'
       )
     } finally {
-      setExportandoPdf(false)
+      if (scrollHost) scrollHost.scrollTop = prevScrollTop
+      setExportando(null)
+    }
+  }
+
+  const exportarPPTX = async () => {
+    const el = dashboardRef.current
+    if (!el) return
+    setExportando('pptx')
+    const { scrollHost, prevScrollTop } = await prepararScrollCapturaDashboard(el)
+    try {
+      const recortes = await generarRecortesDashboard(el)
+      const fecha = new Date().toISOString().split('T')[0]
+      await exportDashboardRecortesToPptx(recortes, `dashboard_${fecha}.pptx`)
+    } catch (err) {
+      console.error('Error al exportar PowerPoint:', err)
+      window.alert(
+        err instanceof Error ? err.message : 'No se pudo generar el archivo PowerPoint. Inténtalo de nuevo.'
+      )
+    } finally {
+      if (scrollHost) scrollHost.scrollTop = prevScrollTop
+      setExportando(null)
     }
   }
 
@@ -431,9 +370,17 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
                 variant="outline"
                 size="sm"
                 onClick={exportarPDF}
-                disabled={exportandoPdf}
+                disabled={exportando != null}
               >
-                {exportandoPdf ? 'Generando PDF…' : 'Exportar Dashboard como PDF'}
+                {exportando === 'pdf' ? 'Generando PDF…' : 'Exportar PDF'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportarPPTX}
+                disabled={exportando != null}
+              >
+                {exportando === 'pptx' ? 'Generando PowerPoint…' : 'Exportar PowerPoint (.pptx)'}
               </Button>
               <DialogClose asChild>
                 <Button
