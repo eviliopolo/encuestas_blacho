@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -61,7 +62,7 @@ const PIE_COLORS_BY_NAME = {
   'Sin respuesta': '#94A3B8',
 }
 
-const defaultFiltros = { ied: '', curso: '' }
+const defaultFiltros = { ied: '', curso: '', identificacion: '' }
 
 /** Orden de presentación: igual al cuestionario (P1 → P33), luego IED. */
 const ORDEN_GRAFICOS = [
@@ -440,6 +441,21 @@ export function Dashboard({ encuestas = [], open, onOpenChange }) {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2 min-w-[180px] flex-1 max-w-[280px]">
+                  <Label htmlFor="dashboard-filtro-identificacion" className="text-xs">
+                    Documento de identidad
+                  </Label>
+                  <Input
+                    id="dashboard-filtro-identificacion"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Ej. 1234567890"
+                    value={filtros.identificacion}
+                    onChange={(e) =>
+                      setFiltros((f) => ({ ...f, identificacion: e.target.value }))
+                    }
+                  />
                 </div>
                 <Button variant="outline" onClick={limpiarFiltros}>
                   Limpiar filtros

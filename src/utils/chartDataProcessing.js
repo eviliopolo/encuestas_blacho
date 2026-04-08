@@ -71,6 +71,14 @@ export const calcularPorcentajeSi = (data, campo) => {
   return Math.round((siCount / total) * 100)
 }
 
+/** Normaliza documento para comparar (ignora espacios, puntos, guiones). */
+function normalizarDocumentoId(valor) {
+  return String(valor ?? '')
+    .trim()
+    .replace(/[\s.\-_]/g, '')
+    .toLowerCase()
+}
+
 /**
  * Aplica filtros a los datos de encuestas.
  */
@@ -81,6 +89,15 @@ export const aplicarFiltros = (data, filtros) => {
   }
   if (filtros.curso) {
     filtrada = filtrada.filter((row) => row.curso === filtros.curso)
+  }
+  const docFiltro = filtros.identificacion != null ? String(filtros.identificacion).trim() : ''
+  if (docFiltro) {
+    const needle = normalizarDocumentoId(docFiltro)
+    if (needle) {
+      filtrada = filtrada.filter((row) =>
+        normalizarDocumentoId(row.identificacion).includes(needle)
+      )
+    }
   }
   if (filtros.fechaDesde) {
     const desde = new Date(filtros.fechaDesde)
