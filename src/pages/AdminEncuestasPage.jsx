@@ -208,10 +208,9 @@ export default function AdminEncuestasPage() {
                         <Button
                           size="sm" variant="ghost"
                           onClick={() => eliminar(e)}
-                          disabled={cerrada}
-                          title={soloAbierta || 'Archivar'}
+                          title="Archivar (oculta la encuesta del listado; las respuestas se conservan)"
                         >
-                          <Trash2 className={`h-4 w-4 ${cerrada ? '' : 'text-destructive'}`} />
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     )

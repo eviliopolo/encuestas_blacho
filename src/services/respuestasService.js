@@ -208,30 +208,57 @@ export async function eliminarRespuestaEncuesta(id) {
 /**
  * Descarga todas las respuestas de una encuesta con los detalles por
  * pregunta en una estructura aplanable a Excel.
+ *
+ * Supabase/PostgREST aplica por defecto un límite de 1000 filas por
+ * request.  Para no perder respuestas en encuestas grandes, paginamos
+ * con `.range()` hasta agotar los resultados.
  */
-export async function listarRespuestasEncuesta(encuestaId, filtros = {}) {
-  let query = supabase
-    .from('respuestas_encuesta')
-    .select(`
-      *,
-      detalles:respuestas_detalle (
-        id,
-        pregunta_id,
-        opcion_pregunta_id,
-        texto_respuesta,
-        opcion:opciones_pregunta ( id, texto, orden, valor )
-      )
-    `)
-    .eq('encuesta_id', encuestaId)
-    .order('fecha_registro', { ascending: false })
+const PAGE_SIZE = 1000
 
+function aplicarFiltros(query, filtros) {
   if (filtros.ied)   query = query.eq('ied', filtros.ied)
   if (filtros.curso) query = query.eq('curso', filtros.curso)
   if (filtros.edadMin != null) query = query.gte('edad', filtros.edadMin)
   if (filtros.edadMax != null) query = query.lte('edad', filtros.edadMax)
   if (filtros.desde) query = query.gte('fecha_registro', filtros.desde)
   if (filtros.hasta) query = query.lte('fecha_registro', filtros.hasta)
+  return query
+}
 
-  const { data, error } = await query
-  return { data: data || [], error }
+export async function listarRespuestasEncuesta(encuestaId, filtros = {}) {
+  const todas = []
+  let desde = 0
+
+  // Seguridad: tope duro para evitar loop infinito si algo raro pasa
+  const MAX_PAGINAS = 500
+
+  for (let i = 0; i < MAX_PAGINAS; i++) {
+    let query = supabase
+      .from('respuestas_encuesta')
+      .select(`
+        *,
+        detalles:respuestas_detalle (
+          id,
+          pregunta_id,
+          opcion_pregunta_id,
+          texto_respuesta,
+          opcion:opciones_pregunta ( id, texto, orden, valor )
+        )
+      `)
+      .eq('encuesta_id', encuestaId)
+      .order('fecha_registro', { ascending: false })
+      .range(desde, desde + PAGE_SIZE - 1)
+
+    query = aplicarFiltros(query, filtros)
+
+    const { data, error } = await query
+    if (error) return { data: todas, error }
+    if (!data || data.length === 0) break
+
+    todas.push(...data)
+    if (data.length < PAGE_SIZE) break
+    desde += PAGE_SIZE
+  }
+
+  return { data: todas, error: null }
 }

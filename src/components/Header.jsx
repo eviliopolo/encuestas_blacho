@@ -1,11 +1,18 @@
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-const navLinks = [
-  { to: '/', label: 'Legacy', end: true },
+/** Pon en `true` para volver a mostrar el acceso a la pantalla legacy en el menú. */
+const MOSTRAR_NAV_LEGACY = false
+
+const navLinksAll = [
+  { to: '/legacy', label: 'Legacy', end: true, soloSiLegacyVisible: true },
   { to: '/admin', label: 'Administración' },
   { to: '/responder', label: 'Responder' },
 ]
+
+const navLinks = navLinksAll.filter(
+  (link) => !link.soloSiLegacyVisible || MOSTRAR_NAV_LEGACY
+)
 
 export function Header() {
   return (

@@ -15,7 +15,8 @@ export default function App() {
         <Header />
         <main className="container mx-auto px-4 py-6 flex-1 w-full">
           <Routes>
-            <Route path="/" element={<LegacyEncuestaPage />} />
+            <Route path="/" element={<Navigate to="/admin" replace />} />
+            <Route path="/legacy" element={<LegacyEncuestaPage />} />
             <Route path="/admin" element={<AdminEncuestasPage />} />
             <Route path="/admin/encuestas/nueva" element={<EncuestaBuilderPage />} />
             <Route path="/admin/encuestas/:id" element={<EncuestaBuilderPage />} />
@@ -23,7 +24,7 @@ export default function App() {
             <Route path="/estadisticas/:id" element={<EstadisticasEncuestaPage />} />
             <Route path="/responder" element={<SeleccionarEncuestaPage />} />
             <Route path="/responder/:id" element={<ResponderEncuestaPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
         </main>
         <footer className="border-t py-4 mt-auto">
