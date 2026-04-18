@@ -106,6 +106,106 @@ export function validarRespuestas({ preguntas, respuestas, estudiante }) {
 }
 
 /**
+ * Obtiene una respuesta (cabecera + detalles) por id.
+ */
+export async function obtenerRespuestaEncuesta(id) {
+  const { data, error } = await supabase
+    .from('respuestas_encuesta')
+    .select(`
+      *,
+      detalles:respuestas_detalle (
+        id,
+        pregunta_id,
+        opcion_pregunta_id,
+        texto_respuesta
+      )
+    `)
+    .eq('id', id)
+    .single()
+  return { data, error }
+}
+
+/**
+ * Actualiza una respuesta completa (cabecera + detalles).
+ *
+ * Estrategia: UPDATE de cabecera + DELETE all + INSERT de detalles.
+ * Se hace en dos pasos porque supabase-js no expone transacciones; las
+ * validaciones quedan a cargo de los triggers/constraints.
+ */
+export async function actualizarRespuestaEncuesta({ id, estudiante, respuestas, preguntas }) {
+  const cabecera = {
+    nombre_estudiante: estudiante.nombre_estudiante?.trim(),
+    ied:               estudiante.ied?.trim(),
+    curso:             estudiante.curso?.trim(),
+    identificacion:    estudiante.identificacion?.trim(),
+    edad:              Number(estudiante.edad),
+  }
+
+  const { error: errHead } = await supabase
+    .from('respuestas_encuesta')
+    .update(cabecera)
+    .eq('id', id)
+  if (errHead) return { data: null, error: errHead }
+
+  const { error: errDel } = await supabase
+    .from('respuestas_detalle')
+    .delete()
+    .eq('respuesta_encuesta_id', id)
+  if (errDel) return { data: null, error: errDel }
+
+  const detalles = []
+  for (const pregunta of preguntas) {
+    const valor = respuestas[pregunta.id]
+    if (valor === undefined || valor === null) continue
+
+    if (pregunta.tipo === 'unica_respuesta') {
+      if (!valor) continue
+      detalles.push({
+        respuesta_encuesta_id: id,
+        pregunta_id: pregunta.id,
+        opcion_pregunta_id: valor,
+      })
+    } else if (pregunta.tipo === 'multiple_respuesta') {
+      const arr = Array.isArray(valor) ? valor : []
+      arr.forEach((opt) => {
+        if (!opt) return
+        detalles.push({
+          respuesta_encuesta_id: id,
+          pregunta_id: pregunta.id,
+          opcion_pregunta_id: opt,
+        })
+      })
+    } else if (pregunta.tipo === 'respuesta_abierta') {
+      const texto = String(valor).trim()
+      if (!texto) continue
+      detalles.push({
+        respuesta_encuesta_id: id,
+        pregunta_id: pregunta.id,
+        texto_respuesta: texto,
+      })
+    }
+  }
+
+  if (detalles.length) {
+    const { error: errDet } = await supabase.from('respuestas_detalle').insert(detalles)
+    if (errDet) return { data: null, error: errDet }
+  }
+
+  return { data: { id }, error: null }
+}
+
+/**
+ * Elimina una respuesta y, por cascada, sus detalles.
+ */
+export async function eliminarRespuestaEncuesta(id) {
+  const { error } = await supabase
+    .from('respuestas_encuesta')
+    .delete()
+    .eq('id', id)
+  return { error }
+}
+
+/**
  * Descarga todas las respuestas de una encuesta con los detalles por
  * pregunta en una estructura aplanable a Excel.
  */

@@ -6,6 +6,7 @@ import EncuestaBuilderPage from '@/pages/EncuestaBuilderPage'
 import SeleccionarEncuestaPage from '@/pages/SeleccionarEncuestaPage'
 import ResponderEncuestaPage from '@/pages/ResponderEncuestaPage'
 import EstadisticasEncuestaPage from '@/pages/EstadisticasEncuestaPage'
+import RespuestasEncuestaPage from '@/pages/RespuestasEncuestaPage'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/admin" element={<AdminEncuestasPage />} />
             <Route path="/admin/encuestas/nueva" element={<EncuestaBuilderPage />} />
             <Route path="/admin/encuestas/:id" element={<EncuestaBuilderPage />} />
+            <Route path="/admin/encuestas/:id/respuestas" element={<RespuestasEncuestaPage />} />
             <Route path="/estadisticas/:id" element={<EstadisticasEncuestaPage />} />
             <Route path="/responder" element={<SeleccionarEncuestaPage />} />
             <Route path="/responder/:id" element={<ResponderEncuestaPage />} />

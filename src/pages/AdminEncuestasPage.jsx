@@ -12,7 +12,7 @@ import {
   listarEncuestas, cerrarEncuesta, abrirEncuesta, duplicarEncuesta, eliminarEncuesta,
 } from '@/services/encuestasService'
 import {
-  BarChart3, Copy, Edit2, Plus, Lock, Unlock, Trash2, Download, Share2,
+  BarChart3, Copy, Edit2, Plus, Lock, Unlock, Trash2, Download, Share2, ListChecks,
 } from 'lucide-react'
 import { exportarEncuestaExcel } from '@/utils/exportEncuestaNuevaExcel'
 
@@ -150,8 +150,11 @@ export default function AdminEncuestasPage() {
                     <Button size="sm" variant="ghost" onClick={() => copiarEnlace(e)} title="Copiar enlace">
                       <Share2 className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" asChild title="Editar">
+                    <Button size="sm" variant="ghost" asChild title="Editar estructura">
                       <Link to={`/admin/encuestas/${e.id}`}><Edit2 className="h-4 w-4" /></Link>
+                    </Button>
+                    <Button size="sm" variant="ghost" asChild title="Ver / editar respuestas">
+                      <Link to={`/admin/encuestas/${e.id}/respuestas`}><ListChecks className="h-4 w-4" /></Link>
                     </Button>
                     <Button size="sm" variant="ghost" asChild title="Estadísticas">
                       <Link to={`/estadisticas/${e.id}`}><BarChart3 className="h-4 w-4" /></Link>
