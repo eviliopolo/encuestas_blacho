@@ -146,32 +146,76 @@ export default function AdminEncuestasPage() {
                   {e.fecha_cierre ? new Date(e.fecha_cierre).toLocaleDateString() : '—'}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1 flex-wrap">
-                    <Button size="sm" variant="ghost" onClick={() => copiarEnlace(e)} title="Copiar enlace">
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild title="Editar estructura">
-                      <Link to={`/admin/encuestas/${e.id}`}><Edit2 className="h-4 w-4" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild title="Ver / editar respuestas">
-                      <Link to={`/admin/encuestas/${e.id}/respuestas`}><ListChecks className="h-4 w-4" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" asChild title="Estadísticas">
-                      <Link to={`/estadisticas/${e.id}`}><BarChart3 className="h-4 w-4" /></Link>
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => exportar(e)} title="Exportar">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => duplicar(e)} title="Duplicar">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => toggleEstado(e)} title={e.estado === 'abierta' ? 'Cerrar' : 'Abrir'}>
-                      {e.estado === 'abierta' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => eliminar(e)} title="Archivar">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+                  {(() => {
+                    const cerrada = e.estado !== 'abierta'
+                    const soloAbierta = cerrada
+                      ? 'Disponible solo cuando la encuesta está abierta'
+                      : undefined
+                    return (
+                      <div className="flex justify-end gap-1 flex-wrap">
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => copiarEnlace(e)}
+                          disabled={cerrada}
+                          title={soloAbierta || 'Copiar enlace'}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => navigate(`/admin/encuestas/${e.id}`)}
+                          disabled={cerrada}
+                          title={soloAbierta || 'Editar estructura'}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => navigate(`/admin/encuestas/${e.id}/respuestas`)}
+                          disabled={cerrada}
+                          title={soloAbierta || 'Ver / editar respuestas'}
+                        >
+                          <ListChecks className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => navigate(`/estadisticas/${e.id}`)}
+                          title="Estadísticas"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => exportar(e)}
+                          title="Exportar"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => duplicar(e)}
+                          title="Duplicar"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => toggleEstado(e)}
+                          title={e.estado === 'abierta' ? 'Cerrar' : 'Abrir'}
+                        >
+                          {e.estado === 'abierta' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => eliminar(e)}
+                          disabled={cerrada}
+                          title={soloAbierta || 'Archivar'}
+                        >
+                          <Trash2 className={`h-4 w-4 ${cerrada ? '' : 'text-destructive'}`} />
+                        </Button>
+                      </div>
+                    )
+                  })()}
                 </td>
               </tr>
             ))}
