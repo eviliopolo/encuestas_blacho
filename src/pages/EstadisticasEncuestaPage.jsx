@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LabelList,
 } from 'recharts'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,32 @@ import { generarRecortesDashboard } from '@/utils/dashboardChartCapture'
 import { exportDashboardRecortesToPptx } from '@/utils/exportDashboardPptx'
 
 const COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#9333ea', '#0891b2', '#ca8a04', '#be185d', '#0ea5e9', '#65a30d', '#f97316', '#7c3aed']
+
+/** Porcentaje 0–100 con formato local (es-CO). */
+function fmtPctPart(p) {
+  const x = Number.isFinite(p) ? p : 0
+  const fractionDigits = Math.abs(x % 1) < 1e-9 ? 0 : 1
+  return `${x.toLocaleString('es-CO', { maximumFractionDigits: fractionDigits, minimumFractionDigits: fractionDigits })}%`
+}
+
+function EstadisticasTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const row = payload[0]?.payload
+  if (!row) return null
+  const name = row.name ?? payload[0].name
+  const count = row.value
+  const pct = row.pct
+  return (
+    <div className="rounded-lg border border-border/80 bg-popover px-3 py-2 text-sm shadow-md">
+      <div className="font-medium leading-snug text-foreground">{name}</div>
+      <div className="mt-1 tabular-nums text-muted-foreground">
+        <span className="font-medium text-foreground">{count}</span>
+        {' · '}
+        <span>{fmtPctPart(pct)}</span>
+      </div>
+    </div>
+  )
+}
 
 const defaultFiltros = { ied: '', curso: '', identificacion: '' }
 
@@ -108,67 +135,125 @@ function GraficaPregunta({ item }) {
     )
   }
 
-  const data = conteos.map((c) => ({ name: c.opcion, value: c.count }))
+  const data = conteos.map((c) => {
+    const value = c.count
+    const pct = total > 0 ? (100 * value) / total : 0
+    return { name: c.opcion, value, pct }
+  })
   const tg = pregunta.tipo_grafica
+
+  const baseHint = (
+    <p className="text-xs text-muted-foreground mb-3 tabular-nums">
+      Base: <strong className="font-medium text-foreground">{total}</strong>{' '}
+      {total === 1 ? 'respuesta' : 'respuestas'} · Porcentajes sobre esta base
+    </p>
+  )
 
   if (tg === 'ninguna') {
     return (
-      <ul className="text-sm space-y-1">
-        {data.map((d, i) => (
-          <li key={i}>{d.name}: <strong>{d.value}</strong></li>
-        ))}
-      </ul>
+      <div>
+        {baseHint}
+        <ul className="text-sm space-y-2">
+          {data.map((d, i) => (
+            <li key={i} className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-2 last:border-0">
+              <span className="text-foreground">{d.name}</span>
+              <span className="tabular-nums">
+                <strong>{d.value}</strong>
+                <span className="text-muted-foreground"> ({fmtPctPart(d.pct)})</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     )
   }
 
   if (tg === 'circular') {
     return (
-      <ResponsiveContainer width="100%" height={260}>
-        <PieChart>
-          <Pie dataKey="value" data={data} label nameKey="name">
-            {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
+      <div>
+        {baseHint}
+        <ResponsiveContainer width="100%" height={320}>
+          <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Pie
+              dataKey="value"
+              data={data}
+              nameKey="name"
+              cx="50%"
+              cy="48%"
+              innerRadius={52}
+              outerRadius={112}
+              paddingAngle={1}
+              stroke="hsl(var(--background))"
+              strokeWidth={2}
+              labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeOpacity: 0.5 }}
+              label={({ percent }) => fmtPctPart(percent * 100)}
+            >
+              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            </Pie>
+            <Tooltip content={<EstadisticasTooltip />} />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ paddingTop: 12 }}
+              formatter={(value, entry) => (
+                <span className="text-xs text-foreground">{value}</span>
+              )}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     )
   }
   if (tg === 'lineas') {
     return (
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-          <YAxis allowDecimals={false} />
-          <Tooltip />
-          <Line type="monotone" dataKey="value" stroke={COLORS[0]} strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
+      <div>
+        {baseHint}
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={data.length > 5 ? -35 : 0} textAnchor={data.length > 5 ? 'end' : 'middle'} height={data.length > 5 ? 70 : 36} />
+            <YAxis allowDecimals={false} width={36} tick={{ fontSize: 11 }} />
+            <Tooltip content={<EstadisticasTooltip />} />
+            <Line type="monotone" dataKey="value" stroke={COLORS[0]} strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(var(--background))' }} activeDot={{ r: 6 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     )
   }
   const layout = tg === 'barras' ? 'vertical' : 'horizontal'
+  const barHeight = layout === 'vertical'
+    ? Math.min(560, Math.max(280, 56 + data.length * 44))
+    : 300
+  const pctLabel = (v) => fmtPctPart(v)
+
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} layout={layout}>
-        <CartesianGrid strokeDasharray="3 3" />
-        {layout === 'vertical' ? (
-          <>
-            <XAxis type="number" allowDecimals={false} />
-            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
-          </>
-        ) : (
-          <>
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-            <YAxis allowDecimals={false} />
-          </>
-        )}
-        <Tooltip />
-        <Bar dataKey="value">
-          {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <div>
+      {baseHint}
+      <ResponsiveContainer width="100%" height={barHeight}>
+        <BarChart data={data} layout={layout} margin={{ top: 12, right: layout === 'vertical' ? 56 : 16, left: layout === 'vertical' ? 8 : 4, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={layout !== 'vertical'} vertical={layout === 'vertical'} />
+          {layout === 'vertical' ? (
+            <>
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} domain={[0, 'auto']} />
+              <YAxis type="category" dataKey="name" width={148} tick={{ fontSize: 11 }} tickMargin={4} />
+            </>
+          ) : (
+            <>
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={data.length > 4 ? -30 : 0} textAnchor={data.length > 4 ? 'end' : 'middle'} height={data.length > 4 ? 72 : 40} />
+              <YAxis allowDecimals={false} width={40} tick={{ fontSize: 11 }} domain={[0, 'auto']} />
+            </>
+          )}
+          <Tooltip content={<EstadisticasTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.35)' }} />
+          <Bar dataKey="value" radius={layout === 'vertical' ? [0, 6, 6, 0] : [6, 6, 0, 0]} maxBarSize={layout === 'vertical' ? 36 : 48}>
+            {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            {layout === 'vertical' ? (
+              <LabelList dataKey="pct" position="right" formatter={pctLabel} className="fill-foreground text-[11px] font-medium" />
+            ) : (
+              <LabelList dataKey="pct" position="top" formatter={pctLabel} className="fill-foreground text-[11px] font-medium" />
+            )}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 
