@@ -32,10 +32,13 @@ export default function SeleccionarEncuestaPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {encuestas.map((e) => (
             <Card key={e.id} className="flex flex-col">
-              <CardHeader>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-base">{e.nombre}</CardTitle>
+                <p className="text-xs font-medium text-primary/90 mt-1.5 leading-snug">
+                  Tipo de test: {e.tipo_test || 'No aplica'}
+                </p>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col gap-3">
+              <CardContent className="flex-1 flex flex-col gap-3 pt-0">
                 <p className="text-sm text-muted-foreground line-clamp-4">
                   {e.descripcion || 'Sin descripción.'}
                 </p>

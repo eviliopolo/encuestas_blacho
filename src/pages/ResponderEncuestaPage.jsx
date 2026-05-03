@@ -127,7 +127,10 @@ export default function ResponderEncuestaPage() {
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>{encuesta.nombre}</CardTitle>
-          {encuesta.descripcion && <p className="text-sm text-muted-foreground">{encuesta.descripcion}</p>}
+          <p className="text-xs font-medium text-muted-foreground mt-1">
+            Tipo de test: {encuesta.tipo_test || 'No aplica'}
+          </p>
+          {encuesta.descripcion && <p className="text-sm text-muted-foreground mt-2">{encuesta.descripcion}</p>}
         </CardHeader>
       </Card>
 

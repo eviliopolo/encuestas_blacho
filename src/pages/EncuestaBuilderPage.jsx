@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import {
   crearEncuesta, actualizarEncuesta, obtenerEncuestaCompleta,
+  TIPOS_TEST_VALORES, TIPO_TEST_DEFAULT,
 } from '@/services/encuestasService'
 import {
   TIPOS_PREGUNTA, TIPOS_GRAFICA, reemplazarPreguntas, validarPreguntas,
@@ -42,6 +43,7 @@ export default function EncuestaBuilderPage() {
 
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [tipoTest, setTipoTest] = useState(TIPO_TEST_DEFAULT)
   const [fechaCierre, setFechaCierre] = useState('')
   const [preguntas, setPreguntas] = useState([defaultPregunta(1)])
   const [dragIndex, setDragIndex] = useState(null)
@@ -57,6 +59,11 @@ export default function EncuestaBuilderPage() {
       } else {
         setNombre(data.nombre || '')
         setDescripcion(data.descripcion || '')
+        setTipoTest(
+          data.tipo_test && TIPOS_TEST_VALORES.includes(data.tipo_test)
+            ? data.tipo_test
+            : TIPO_TEST_DEFAULT,
+        )
         setFechaCierre(data.fecha_cierre ? data.fecha_cierre.slice(0, 16) : '')
         setPreguntas((data.preguntas || []).map((p) => ({
           id: p.id,
@@ -191,6 +198,7 @@ export default function EncuestaBuilderPage() {
           nombre: nombre.trim(),
           descripcion: descripcion.trim() || null,
           fecha_cierre: fechaCierre || null,
+          tipo_test: tipoTest,
         })
         if (error || !data) throw new Error(error?.message || 'No se pudo crear')
         encuestaId = data.id
@@ -199,6 +207,7 @@ export default function EncuestaBuilderPage() {
           nombre: nombre.trim(),
           descripcion: descripcion.trim() || null,
           fecha_cierre: fechaCierre || null,
+          tipo_test: tipoTest,
         })
         if (error) throw new Error(error.message)
       }
@@ -264,6 +273,20 @@ export default function EncuestaBuilderPage() {
               value={fechaCierre}
               onChange={(e) => setFechaCierre(e.target.value)}
             />
+          </div>
+          <div>
+            <Label htmlFor="tipo_test">Tipo de test</Label>
+            <Select value={tipoTest} onValueChange={setTipoTest}>
+              <SelectTrigger id="tipo_test"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+              <SelectContent>
+                {TIPOS_TEST_VALORES.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Clasifica la encuesta para informes y para quien la responde.
+            </p>
           </div>
         </CardContent>
       </Card>

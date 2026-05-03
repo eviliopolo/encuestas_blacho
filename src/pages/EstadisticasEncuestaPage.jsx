@@ -414,6 +414,9 @@ export default function EstadisticasEncuestaPage() {
             <h2 className="text-xl font-semibold">Dashboard de estadísticas</h2>
           </div>
           <p className="text-sm text-muted-foreground pl-1">{encuesta.nombre}</p>
+          <p className="text-xs text-muted-foreground pl-1">
+            Tipo de test: {encuesta.tipo_test || 'No aplica'}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -117,6 +117,7 @@ export default function AdminEncuestasPage() {
           <thead className="bg-muted text-left">
             <tr>
               <th className="px-4 py-3 font-medium">Nombre</th>
+              <th className="px-4 py-3 font-medium min-w-[140px]">Tipo de test</th>
               <th className="px-4 py-3 font-medium">Estado</th>
               <th className="px-4 py-3 font-medium">Creación</th>
               <th className="px-4 py-3 font-medium">Cierre</th>
@@ -125,14 +126,17 @@ export default function AdminEncuestasPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Cargando…</td></tr>
             ) : encuestas.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No hay encuestas.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No hay encuestas.</td></tr>
             ) : encuestas.map((e) => (
               <tr key={e.id} className="border-t">
                 <td className="px-4 py-3">
                   <div className="font-medium">{e.nombre}</div>
                   {e.descripcion && <div className="text-xs text-muted-foreground line-clamp-1">{e.descripcion}</div>}
+                </td>
+                <td className="px-4 py-3 align-top text-muted-foreground max-w-[220px]">
+                  <span className="text-sm text-foreground leading-snug">{e.tipo_test || 'No aplica'}</span>
                 </td>
                 <td className="px-4 py-3">
                   <Badge variant={e.estado === 'abierta' ? 'default' : 'secondary'}>

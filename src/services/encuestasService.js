@@ -2,6 +2,17 @@ import { supabase } from '@/lib/supabase'
 
 export const ENCUESTA_LEGACY_ID = '11111111-1111-1111-1111-111111111111'
 
+/** Valores permitidos para `encuestas.tipo_test` (deben coincidir con el CHECK en BD). */
+export const TIPOS_TEST_VALORES = Object.freeze([
+  'No aplica',
+  'Test de orientación vocacional chaside',
+])
+
+export const TIPO_TEST_DEFAULT = 'No aplica'
+
+/** Coincide con el valor en BD y `TIPOS_TEST_VALORES`. */
+export const TIPO_TEST_CHASIDE = 'Test de orientación vocacional chaside'
+
 /**
  * Lista encuestas con filtros.
  * @param {{ estado?: 'abierta'|'cerrada', desde?: string, hasta?: string, soloActivas?: boolean }} filtros
@@ -66,10 +77,11 @@ export async function obtenerEncuestaCompleta(id) {
   return { data, error }
 }
 
-export async function crearEncuesta({ nombre, descripcion, fecha_cierre }) {
+export async function crearEncuesta({ nombre, descripcion, fecha_cierre, tipo_test }) {
+  const tt = tipo_test && TIPOS_TEST_VALORES.includes(tipo_test) ? tipo_test : TIPO_TEST_DEFAULT
   const { data, error } = await supabase
     .from('encuestas')
-    .insert([{ nombre, descripcion, fecha_cierre: fecha_cierre || null }])
+    .insert([{ nombre, descripcion, fecha_cierre: fecha_cierre || null, tipo_test: tt }])
     .select()
     .single()
   return { data, error }
@@ -109,6 +121,9 @@ export async function duplicarEncuesta(id) {
     nombre: `${original.nombre} (copia)`,
     descripcion: original.descripcion,
     fecha_cierre: null,
+    tipo_test: original.tipo_test && TIPOS_TEST_VALORES.includes(original.tipo_test)
+      ? original.tipo_test
+      : TIPO_TEST_DEFAULT,
   })
   if (errCreate) return { data: null, error: errCreate }
 

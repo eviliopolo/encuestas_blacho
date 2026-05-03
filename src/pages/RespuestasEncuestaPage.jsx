@@ -9,9 +9,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  ArrowLeft, Pencil, Trash2, Save, Loader2, BarChart3, Download,
+  ArrowLeft, Pencil, Trash2, Save, Loader2, BarChart3, Download, FileDown,
 } from 'lucide-react'
-import { obtenerEncuestaCompleta } from '@/services/encuestasService'
+import { obtenerEncuestaCompleta, TIPO_TEST_CHASIDE } from '@/services/encuestasService'
 import {
   listarRespuestasEncuesta,
   obtenerRespuestaEncuesta,
@@ -20,6 +20,7 @@ import {
   validarRespuestas,
 } from '@/services/respuestasService'
 import { exportarEncuestaExcel } from '@/utils/exportEncuestaNuevaExcel'
+import { descargarInformePdfChaside } from '@/utils/generarPdfResultadoChaside'
 
 const PAGE_SIZE = 20
 
@@ -186,6 +187,26 @@ export default function RespuestasEncuestaPage() {
     }
   }
 
+  const handleDescargarInformeChaside = (row) => {
+    try {
+      if (!row.detalles?.length) {
+        showMsg('No hay respuestas registradas para generar el informe.', 'destructive')
+        return
+      }
+      descargarInformePdfChaside({
+        nombreEstudiante: row.nombre_estudiante,
+        identificacion: row.identificacion,
+        edad: row.edad,
+        curso: row.curso,
+        ied: row.ied,
+        preguntas: encuesta.preguntas || [],
+        detalles: row.detalles,
+      })
+    } catch (e) {
+      showMsg(e?.message || 'No se pudo generar el PDF.', 'destructive')
+    }
+  }
+
   if (loading) return <p className="text-muted-foreground">Cargando…</p>
 
   if (!encuesta) {
@@ -195,6 +216,8 @@ export default function RespuestasEncuestaPage() {
       </Alert>
     )
   }
+
+  const esEncuestaChaside = encuesta.tipo_test === TIPO_TEST_CHASIDE
 
   return (
     <>
@@ -207,8 +230,11 @@ export default function RespuestasEncuestaPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-xl font-semibold">Respuestas: {encuesta.nombre}</h2>
+          <p className="text-xs font-medium text-muted-foreground mt-1">
+            Tipo de test: {encuesta.tipo_test || 'No aplica'}
+          </p>
           {encuesta.descripcion && (
-            <p className="text-sm text-muted-foreground">{encuesta.descripcion}</p>
+            <p className="text-sm text-muted-foreground mt-2">{encuesta.descripcion}</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -276,6 +302,18 @@ export default function RespuestasEncuestaPage() {
                   <td className="px-3 py-2">{row.edad}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
+                      {esEncuestaChaside && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 gap-1"
+                          onClick={() => handleDescargarInformeChaside(row)}
+                          title="Descargar informe PDF CHASIDE"
+                        >
+                          <FileDown className="h-3.5 w-3.5" />
+                          Informe CHASIDE
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" className="h-8 gap-1" onClick={() => handleOpenEditor(row)}>
                         <Pencil className="h-3.5 w-3.5" />
                         Ver/Editar
