@@ -6,7 +6,7 @@ import {
   destacarDosTiers,
   resolverTextoOpcionDesdePregunta,
 } from '@/utils/chasideScoring'
-import { CHASIDE_INTERESES } from '@/utils/chasideConstants'
+import { CHASIDE_APTITUDES, CHASIDE_INTERESES, CHASIDE_LETTERS } from '@/utils/chasideConstants'
 
 describe('textoOpcionEsSi', () => {
   it('acepta sí / si / yes', () => {
@@ -73,14 +73,21 @@ describe('destacarMaximo / destacarDosTiers', () => {
   })
 })
 
-describe('CHASIDE_INTERESES mapping', () => {
-  it('no repite números entre letras', () => {
+describe('CHASIDE planilla oficial (10 intereses + 4 aptitudes)', () => {
+  it('cubre 1..98 sin repetir entre todas las letras', () => {
     const seen = new Set()
-    for (const L of Object.keys(CHASIDE_INTERESES)) {
+    for (const L of CHASIDE_LETTERS) {
+      expect(CHASIDE_INTERESES[L].length).toBe(10)
+      expect(CHASIDE_APTITUDES[L].length).toBe(4)
       for (const n of CHASIDE_INTERESES[L]) {
         expect(seen.has(n)).toBe(false)
         seen.add(n)
       }
+      for (const n of CHASIDE_APTITUDES[L]) {
+        expect(seen.has(n)).toBe(false)
+        seen.add(n)
+      }
     }
+    expect(seen.size).toBe(98)
   })
 })

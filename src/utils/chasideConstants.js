@@ -1,9 +1,8 @@
 /**
- * Test CHASIDE: asignación de cada número de pregunta (1–98) a áreas C–H–A–S–I–D–E.
- * Fuente: cuadros de puntuación estándar del test (intereses vs aptitudes).
- *
- * Nota: En algunas tablas la pregunta 72 aparece duplicada entre H y S en aptitudes;
- * aquí se cuenta solo en **H** (mediación / humanidades).
+ * Test CHASIDE — Tabla de puntuación según planilla oficial (“Test de Vocación Profesional”):
+ * - Bloque **Intereses**: 10 preguntas por letra (C…E).
+ * - Bloque **Aptitudes**: 4 preguntas por letra.
+ * Total 98 ítems (70 + 28), sin repetir entre bloques.
  */
 
 export const CHASIDE_LETTERS = ['C', 'H', 'A', 'S', 'I', 'D', 'E']
@@ -19,29 +18,26 @@ export const CHASIDE_ETIQUETAS_AREA = [
   'Ciencias Agrarias y de la Naturaleza',
 ]
 
-/** Intereses: cada “Sí” en esa pregunta suma 1 en la columna indicada. */
+/** Intereses (planilla): 10 números de pregunta por columna. */
 export const CHASIDE_INTERESES = Object.freeze({
-  C: [1, 12, 20, 53, 64],
-  H: [9, 25, 34, 41, 56],
-  A: [3, 11, 21, 28, 36],
-  S: [8, 16, 23, 33, 44],
-  I: [6, 19, 27, 38, 47],
-  D: [5, 14, 24, 31, 37],
-  E: [17, 32, 35, 42, 49],
+  C: [98, 12, 64, 53, 85, 1, 78, 20, 71, 91],
+  H: [9, 34, 80, 25, 95, 67, 41, 74, 56, 89],
+  A: [21, 45, 96, 57, 28, 11, 50, 3, 81, 36],
+  S: [33, 92, 70, 8, 87, 62, 23, 44, 16, 52],
+  I: [75, 6, 19, 38, 60, 27, 83, 54, 47, 97],
+  D: [84, 31, 48, 73, 5, 65, 14, 37, 58, 24],
+  E: [77, 42, 88, 17, 93, 32, 68, 49, 35, 61],
 })
 
-/**
- * Aptitudes: cada “Sí” suma en la columna (lista extensa por área).
- * La pregunta 72 solo en H (no en S).
- */
+/** Aptitudes (planilla): 4 números de pregunta por columna. */
 export const CHASIDE_APTITUDES = Object.freeze({
-  C: [71, 78, 85, 91, 98, 2, 15, 46, 51],
-  H: [67, 74, 80, 89, 95, 30, 63, 72, 86],
-  A: [45, 50, 57, 70, 81, 96, 22, 39, 76, 82],
-  S: [52, 62, 87, 92, 4, 29, 40, 69],
-  I: [54, 60, 75, 83, 97, 10, 26, 59, 90],
-  D: [48, 58, 65, 73, 84, 13, 18, 43, 66],
-  E: [61, 68, 77, 88, 93, 7, 55, 79, 94],
+  C: [15, 51, 2, 46],
+  H: [63, 30, 72, 86],
+  A: [22, 39, 76, 82],
+  S: [69, 40, 29, 4],
+  I: [26, 59, 90, 10],
+  D: [13, 66, 18, 43],
+  E: [94, 7, 79, 55],
 })
 
 /** Texto de referencia por columna (leyenda del PDF). */
