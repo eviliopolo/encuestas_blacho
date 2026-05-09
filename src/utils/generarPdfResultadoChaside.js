@@ -19,6 +19,13 @@ const COLOR_AZUL = [37, 99, 235]
 const COLOR_NARANJA = [234, 88, 12]
 const COLOR_FONDO_GRAF = [243, 244, 246]
 
+/** Cuadrícula tipo planilla (cabecera estilo tabla impresa). */
+const COLOR_HEADER_CUA = [254, 243, 199]
+const COLOR_CELDA_SI = [134, 239, 172]
+const COLOR_CELDA_NO = [229, 231, 235]
+const COLOR_TOTAL_CUA = [255, 237, 213]
+const COLOR_BORDE_CUA = [190, 190, 190]
+
 function maximosPorLetra(grupos) {
   return Object.fromEntries(CHASIDE_LETTERS.map((L) => [L, (grupos[L] || []).length]))
 }
@@ -132,6 +139,152 @@ function dibujarTablaReferencia(doc, y0) {
 
   doc.setTextColor(0, 0, 0)
   return maxYy + 6
+}
+
+function dibujarCabeceraLetras(doc, y, colW, headerH) {
+  CHASIDE_LETTERS.forEach((L, i) => {
+    const x = MARGIN + i * colW
+    doc.setFillColor(...COLOR_HEADER_CUA)
+    doc.rect(x, y, colW, headerH, 'F')
+    doc.setDrawColor(...COLOR_BORDE_CUA)
+    doc.rect(x, y, colW, headerH, 'S')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(120, 70, 25)
+    doc.text(L, x + colW / 2, y + headerH / 2 + 2.5, { align: 'center' })
+  })
+}
+
+function dibujarCeldaSiNo(doc, x, y, w, h, numPregunta, esSi) {
+  doc.setFillColor(...(esSi ? COLOR_CELDA_SI : COLOR_CELDA_NO))
+  doc.rect(x, y, w, h, 'F')
+  doc.setDrawColor(...COLOR_BORDE_CUA)
+  doc.rect(x, y, w, h, 'S')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(35, 35, 35)
+  doc.text(String(numPregunta), x + w / 2, y + h / 2 + 2.5, { align: 'center' })
+}
+
+/** Leyenda visual: cuadro + texto (mismos colores que las celdas). */
+function dibujarLeyendaSiNo(doc, y0) {
+  const box = 3.8
+  const sep = 14
+  let x = MARGIN
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8.5)
+
+  doc.setFillColor(...COLOR_CELDA_SI)
+  doc.setDrawColor(...COLOR_BORDE_CUA)
+  doc.rect(x, y0, box, box, 'FD')
+  x += box + 2.5
+  doc.setTextColor(40, 40, 40)
+  doc.text('Sí', x, y0 + box * 0.78)
+
+  x += sep
+  doc.setFillColor(...COLOR_CELDA_NO)
+  doc.rect(x, y0, box, box, 'FD')
+  x += box + 2.5
+  doc.text('No', x, y0 + box * 0.78)
+
+  return y0 + box + 5
+}
+
+function dibujarFilaTotales(doc, y, colW, rowH, scoresPorLetra) {
+  CHASIDE_LETTERS.forEach((L, i) => {
+    const x = MARGIN + i * colW
+    doc.setFillColor(...COLOR_TOTAL_CUA)
+    doc.rect(x, y, colW, rowH, 'F')
+    doc.setDrawColor(...COLOR_BORDE_CUA)
+    doc.rect(x, y, colW, rowH, 'S')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(45, 45, 45)
+    doc.text(String(scoresPorLetra[L] ?? 0), x + colW / 2, y + rowH / 2 + 3, { align: 'center' })
+  })
+}
+
+/**
+ * Cuadrícula CHASIDE como la planilla oficial: columnas C–E, filas por bloque y totales de “Sí”.
+ * @returns {number} siguiente Y (mm).
+ */
+function dibujarCuadriculaPlanilla(doc, y0, mapaSi, totalesIntereses, totalesAptitudes) {
+  const colW = MM_ANCHO_CONTENIDO / 7
+  const headerH = 6.5
+  const celdaH = 6.2
+  const totalH = 7.5
+
+  let y = y0
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(25, 25, 25)
+  doc.text('Cuadrícula de respuestas (planilla CHASIDE)', MARGIN, y)
+  y += 9
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(70, 70, 70)
+  doc.text('Intereses', MARGIN, y)
+  y += 5
+
+  dibujarCabeceraLetras(doc, y, colW, headerH)
+  y += headerH
+
+  const numFilasInt = CHASIDE_INTERESES.C.length
+  for (let r = 0; r < numFilasInt; r++) {
+    CHASIDE_LETTERS.forEach((L, colIdx) => {
+      const num = CHASIDE_INTERESES[L][r]
+      const x = MARGIN + colIdx * colW
+      const esSi = !!mapaSi[num]
+      dibujarCeldaSiNo(doc, x, y, colW, celdaH, num, esSi)
+    })
+    y += celdaH
+  }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(55, 55, 55)
+  doc.text('Total «Sí» (Intereses)', MARGIN, y + 4)
+  y += 5
+  dibujarFilaTotales(doc, y, colW, totalH, totalesIntereses)
+  y += totalH + 10
+
+  doc.setFontSize(8)
+  doc.text('Aptitudes', MARGIN, y)
+  y += 5
+
+  dibujarCabeceraLetras(doc, y, colW, headerH)
+  y += headerH
+
+  const numFilasApt = CHASIDE_APTITUDES.C.length
+  for (let r = 0; r < numFilasApt; r++) {
+    CHASIDE_LETTERS.forEach((L, colIdx) => {
+      const num = CHASIDE_APTITUDES[L][r]
+      const x = MARGIN + colIdx * colW
+      const esSi = !!mapaSi[num]
+      dibujarCeldaSiNo(doc, x, y, colW, celdaH, num, esSi)
+    })
+    y += celdaH
+  }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(55, 55, 55)
+  doc.text('Total «Sí» (Aptitudes)', MARGIN, y + 4)
+  y += 5
+  dibujarFilaTotales(doc, y, colW, totalH, totalesAptitudes)
+  y += totalH + 8
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(55, 55, 55)
+  doc.text('Leyenda', MARGIN, y)
+  y += 5
+  y = dibujarLeyendaSiNo(doc, y)
+
+  doc.setTextColor(0, 0, 0)
+  return y
 }
 
 /**
@@ -264,7 +417,22 @@ export function descargarInformePdfChaside(p) {
     y = MARGIN
   }
 
-  dibujarTablaReferencia(doc, y)
+  y = dibujarTablaReferencia(doc, y)
+
+  const altoCuadriculaAprox =
+    9 + 6.5 + 10 * 6.2 + 5 + 7.5 + 10 + 5 + 6.5 + 4 * 6.2 + 5 + 7.5 + 8 + 5 + 3.8 + 5
+  if (y + altoCuadriculaAprox > pageH - MARGIN) {
+    doc.addPage()
+    y = MARGIN
+  }
+
+  dibujarCuadriculaPlanilla(
+    doc,
+    y,
+    resultado.mapaSi,
+    resultado.intereses,
+    resultado.aptitudes,
+  )
 
   const fname = `resultado_chaside_${slugNombre(nombreEstudiante)}.pdf`
   doc.save(fname)
