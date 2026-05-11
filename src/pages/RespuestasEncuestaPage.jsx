@@ -187,13 +187,13 @@ export default function RespuestasEncuestaPage() {
     }
   }
 
-  const handleDescargarInformeChaside = (row) => {
+  const handleDescargarInformeChaside = async (row) => {
     try {
       if (!row.detalles?.length) {
         showMsg('No hay respuestas registradas para generar el informe.', 'destructive')
         return
       }
-      descargarInformePdfChaside({
+      await descargarInformePdfChaside({
         nombreEstudiante: row.nombre_estudiante,
         identificacion: row.identificacion,
         edad: row.edad,

@@ -15,6 +15,67 @@ import {
 const MM_ANCHO_CONTENIDO = 186
 const MARGIN = 12
 
+/** Logo Alcaldía / Secretaría (recuadro izquierdo); servido desde `public/logos/`. */
+const RUTA_LOGO_ALCALDIA = 'logos/chaside-alcaldia-barranquilla.png'
+/** Logo CORPOGESTIÓN (recuadro derecho del encabezado); servido desde `public/logos/`. */
+const RUTA_LOGO_CORPOGESTION = 'logos/chaside-corpogestion.png'
+
+function formatoJspdfPorDataUrl(dataUrl) {
+  const m = typeof dataUrl === 'string' ? /^data:image\/(\w+);/i.exec(dataUrl) : null
+  if (!m) return 'PNG'
+  const t = m[1].toLowerCase()
+  if (t === 'jpeg' || t === 'jpg') return 'JPEG'
+  if (t === 'png') return 'PNG'
+  return 'PNG'
+}
+
+async function cargarDataUrlDesdePublic(relativePath) {
+  const baseRaw = import.meta.env.BASE_URL ?? '/'
+  const base = baseRaw.endsWith('/') ? baseRaw : `${baseRaw}/`
+  const url = `${base}${relativePath.replace(/^\//, '')}`
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise((resolve, reject) => {
+      const fr = new FileReader()
+      fr.onload = () => resolve(fr.result)
+      fr.onerror = () => reject(fr.error)
+      fr.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
+function medirImagenDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+    img.onerror = () => reject(new Error('No se pudo leer la imagen'))
+    img.src = dataUrl
+  })
+}
+
+/** Encaja proporción en caja (mm), centrado. */
+function medidasImagenEnCaja(boxX, boxY, boxW, boxH, imgW, imgH, padMm = 0.6) {
+  const innerW = Math.max(0.1, boxW - 2 * padMm)
+  const innerH = Math.max(0.1, boxH - 2 * padMm)
+  const ar = imgW / imgH
+  let drawW = innerW
+  let drawH = innerW / ar
+  if (drawH > innerH) {
+    drawH = innerH
+    drawW = innerH * ar
+  }
+  return {
+    drawW,
+    drawH,
+    x: boxX + (boxW - drawW) / 2,
+    y: boxY + (boxH - drawH) / 2,
+  }
+}
+
 const COLOR_AZUL = [37, 99, 235]
 const COLOR_NARANJA = [234, 88, 12]
 const COLOR_FONDO_GRAF = [243, 244, 246]
@@ -336,8 +397,9 @@ function dibujarCuadriculaPlanilla(doc, y0, mapaEstado, totalesIntereses, totale
  * @param {string} [p.ied]  Colegio / IED
  * @param {Array} p.preguntas  Preguntas de la encuesta (con opciones).
  * @param {Array} p.detalles  Detalles de respuesta (pueden incluir `opcion` desde el listado).
+ * @returns {Promise<void>}
  */
-export function descargarInformePdfChaside(p) {
+export async function descargarInformePdfChaside(p) {
   const {
     nombreEstudiante,
     identificacion = '',
@@ -347,6 +409,11 @@ export function descargarInformePdfChaside(p) {
     preguntas = [],
     detalles = [],
   } = p
+
+  const [dataUrlAlcaldia, dataUrlCorpo] = await Promise.all([
+    cargarDataUrlDesdePublic(RUTA_LOGO_ALCALDIA),
+    cargarDataUrlDesdePublic(RUTA_LOGO_CORPOGESTION),
+  ])
 
   const resultado = calcularScoresChaside({
     preguntas,
@@ -364,13 +431,40 @@ export function descargarInformePdfChaside(p) {
 
   doc.setDrawColor(200, 200, 200)
   doc.setFillColor(250, 250, 250)
+  const headerY = y
   doc.rect(MARGIN, y, 88, 16, 'FD')
   doc.rect(MARGIN + 98, y, 88, 16, 'FD')
   doc.setFontSize(7)
   doc.setTextColor(55, 55, 55)
-  doc.text('Alcaldía de Barranquilla', MARGIN + 4, y + 6)
-  doc.text('Secretaría Distrital de Educación', MARGIN + 4, y + 11)
-  doc.text('CORPOGESTIÓN', MARGIN + 102, y + 9)
+
+  if (dataUrlAlcaldia) {
+    try {
+      const { w: iw, h: ih } = await medirImagenDataUrl(dataUrlAlcaldia)
+      const fmt = formatoJspdfPorDataUrl(dataUrlAlcaldia)
+      const { drawW, drawH, x: ix, y: iy } = medidasImagenEnCaja(MARGIN, headerY, 88, 16, iw, ih)
+      doc.addImage(dataUrlAlcaldia, fmt, ix, iy, drawW, drawH)
+    } catch {
+      doc.text('Alcaldía de Barranquilla', MARGIN + 4, headerY + 6)
+      doc.text('Secretaría Distrital de Educación', MARGIN + 4, headerY + 11)
+    }
+  } else {
+    doc.text('Alcaldía de Barranquilla', MARGIN + 4, headerY + 6)
+    doc.text('Secretaría Distrital de Educación', MARGIN + 4, headerY + 11)
+  }
+
+  if (dataUrlCorpo) {
+    try {
+      const { w: iw, h: ih } = await medirImagenDataUrl(dataUrlCorpo)
+      const fmt = formatoJspdfPorDataUrl(dataUrlCorpo)
+      const boxX = MARGIN + 98
+      const { drawW, drawH, x: ix, y: iy } = medidasImagenEnCaja(boxX, headerY, 88, 16, iw, ih)
+      doc.addImage(dataUrlCorpo, fmt, ix, iy, drawW, drawH)
+    } catch {
+      doc.text('CORPOGESTIÓN', MARGIN + 102, headerY + 9)
+    }
+  } else {
+    doc.text('CORPOGESTIÓN', MARGIN + 102, headerY + 9)
+  }
 
   y += 22
   doc.setTextColor(20, 20, 20)
