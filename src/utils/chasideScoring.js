@@ -20,13 +20,22 @@ function vacias() {
   return Object.fromEntries(CHASIDE_LETTERS.map((L) => [L, 0]))
 }
 
+function tieneRespuestaRegistrada(det, pregunta) {
+  if (!pregunta) return false
+  if (pregunta.tipo === 'respuesta_abierta') {
+    return String(det?.texto_respuesta ?? '').trim().length > 0
+  }
+  return !!det?.opcion_pregunta_id
+}
+
 /**
- * Construye mapa número de pregunta CHASIDE (1..n) -> ¿Sí?
- * Usa el orden de `preguntas` ordenadas por `orden` (posición = número CHASIDE).
+ * Mapa número de pregunta CHASIDE (1..n) -> estado de respuesta.
+ * Usa el orden de `preguntas` por `orden` (posición = número CHASIDE).
+ * @returns {Record<number, 'si'|'no'|'sin_respuesta'>}
  */
-export function mapaSiPorNumeroPregunta(preguntasOrdenadas, detalles, resolverTextoOpcion) {
-  /** @type {Record<number, boolean>} */
-  const si = {}
+export function mapaEstadoPorNumeroPregunta(preguntasOrdenadas, detalles, resolverTextoOpcion) {
+  /** @type {Record<number, 'si'|'no'|'sin_respuesta'>} */
+  const est = {}
   const sorted = [...preguntasOrdenadas].sort((a, b) => a.orden - b.orden)
   const detByPregunta = new Map()
   for (const d of detalles || []) {
@@ -37,10 +46,48 @@ export function mapaSiPorNumeroPregunta(preguntasOrdenadas, detalles, resolverTe
     const num = i + 1
     const p = sorted[i]
     const det = detByPregunta.get(p.id)
-    const texto = resolverTextoOpcion(det, p)
-    si[num] = textoOpcionEsSi(texto)
+    if (!tieneRespuestaRegistrada(det, p)) {
+      est[num] = 'sin_respuesta'
+      continue
+    }
+    const texto = p.tipo === 'respuesta_abierta'
+      ? String(det?.texto_respuesta ?? '').trim()
+      : resolverTextoOpcion(det, p)
+    est[num] = textoOpcionEsSi(texto) ? 'si' : 'no'
+  }
+  return est
+}
+
+/**
+ * Construye mapa número de pregunta CHASIDE (1..n) -> ¿Sí?
+ * Usa el orden de `preguntas` ordenadas por `orden` (posición = número CHASIDE).
+ */
+export function mapaSiPorNumeroPregunta(preguntasOrdenadas, detalles, resolverTextoOpcion) {
+  const est = mapaEstadoPorNumeroPregunta(preguntasOrdenadas, detalles, resolverTextoOpcion)
+  /** @type {Record<number, boolean>} */
+  const si = {}
+  for (const [k, v] of Object.entries(est)) {
+    si[Number(k)] = v === 'si'
   }
   return si
+}
+
+/**
+ * Totales globales Sí / No / sin responder sobre los ítems de la encuesta.
+ */
+export function resumenConteosRespuestasChaside(mapaEstado, numPreguntas) {
+  let nSi = 0
+  let nNo = 0
+  let nSin = 0
+  for (let num = 1; num <= numPreguntas; num++) {
+    const e = mapaEstado[num] ?? 'sin_respuesta'
+    if (e === 'si') nSi += 1
+    else if (e === 'no') nNo += 1
+    else nSin += 1
+  }
+  const total = numPreguntas
+  const pctSinRespuesta = total > 0 ? Math.round((100 * nSin) / total) : 0
+  return { nSi, nNo, nSin, total, pctSinRespuesta }
 }
 
 function sumarGrupo(mapaSi, gruposPorLetra) {
@@ -105,10 +152,16 @@ export function resolverTextoOpcionDesdePregunta(det, pregunta) {
 
 export function calcularScoresChaside({ preguntas, detalles, resolverTextoOpcion }) {
   const sorted = [...(preguntas || [])].sort((a, b) => a.orden - b.orden)
-  const mapaSi = mapaSiPorNumeroPregunta(sorted, detalles, resolverTextoOpcion)
+  const mapaEstado = mapaEstadoPorNumeroPregunta(sorted, detalles, resolverTextoOpcion)
+  /** @type {Record<number, boolean>} */
+  const mapaSi = {}
+  for (let num = 1; num <= sorted.length; num++) {
+    mapaSi[num] = mapaEstado[num] === 'si'
+  }
 
   const intereses = sumarGrupo(mapaSi, CHASIDE_INTERESES)
   const aptitudes = sumarGrupo(mapaSi, CHASIDE_APTITUDES)
+  const resumenRespuestas = resumenConteosRespuestasChaside(mapaEstado, sorted.length)
 
   const warnings = []
   if (sorted.length !== CHASIDE_NUM_PREGUNTAS) {
@@ -119,6 +172,8 @@ export function calcularScoresChaside({ preguntas, detalles, resolverTextoOpcion
 
   return {
     mapaSi,
+    mapaEstado,
+    resumenRespuestas,
     intereses,
     aptitudes,
     destacarIntereses: destacarMaximo(intereses),

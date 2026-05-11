@@ -54,6 +54,57 @@ describe('calcularScoresChaside', () => {
     })
     expect(Object.values(r.destacarIntereses).every((x) => !x)).toBe(true)
     expect(Object.values(r.destacarAptitudes).every((x) => !x)).toBe(true)
+    expect(r.resumenRespuestas.nSin).toBe(98)
+    expect(r.resumenRespuestas.pctSinRespuesta).toBe(100)
+  })
+
+  it('distingue Sí, No y sin responder en mapaEstado y resumen', () => {
+    const preguntas = [
+      {
+        id: 'p1',
+        orden: 1,
+        tipo: 'unica_respuesta',
+        opciones: [
+          { id: 's1', texto: 'Sí' },
+          { id: 'n1', texto: 'No' },
+        ],
+      },
+      {
+        id: 'p2',
+        orden: 2,
+        tipo: 'unica_respuesta',
+        opciones: [
+          { id: 's2', texto: 'Sí' },
+          { id: 'n2', texto: 'No' },
+        ],
+      },
+      {
+        id: 'p3',
+        orden: 3,
+        tipo: 'unica_respuesta',
+        opciones: [
+          { id: 's3', texto: 'Sí' },
+          { id: 'n3', texto: 'No' },
+        ],
+      },
+    ]
+    const detalles = [
+      { pregunta_id: 'p1', opcion_pregunta_id: 's1' },
+      { pregunta_id: 'p2', opcion_pregunta_id: 'n2' },
+    ]
+    const r = calcularScoresChaside({
+      preguntas,
+      detalles,
+      resolverTextoOpcion: resolverTextoOpcionDesdePregunta,
+    })
+    expect(r.mapaEstado[1]).toBe('si')
+    expect(r.mapaEstado[2]).toBe('no')
+    expect(r.mapaEstado[3]).toBe('sin_respuesta')
+    expect(r.resumenRespuestas.nSi).toBe(1)
+    expect(r.resumenRespuestas.nNo).toBe(1)
+    expect(r.resumenRespuestas.nSin).toBe(1)
+    expect(r.resumenRespuestas.total).toBe(3)
+    expect(r.resumenRespuestas.pctSinRespuesta).toBe(33)
   })
 })
 
