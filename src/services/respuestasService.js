@@ -212,8 +212,11 @@ export async function eliminarRespuestaEncuesta(id) {
  * Supabase/PostgREST aplica por defecto un límite de 1000 filas por
  * request.  Para no perder respuestas en encuestas grandes, paginamos
  * con `.range()` hasta agotar los resultados.
+ *
+ * El tamaño de página es menor que 1000 porque el embed anidado
+ * (detalle + opciones) encarece cada request y puede provocar timeout en BD.
  */
-const PAGE_SIZE = 1000
+const PAGE_SIZE_LISTAR = 300
 
 function aplicarFiltros(query, filtros) {
   if (filtros.ied)   query = query.eq('ied', filtros.ied)
@@ -247,7 +250,7 @@ export async function listarRespuestasEncuesta(encuestaId, filtros = {}) {
       `)
       .eq('encuesta_id', encuestaId)
       .order('fecha_registro', { ascending: false })
-      .range(desde, desde + PAGE_SIZE - 1)
+      .range(desde, desde + PAGE_SIZE_LISTAR - 1)
 
     query = aplicarFiltros(query, filtros)
 
@@ -256,8 +259,8 @@ export async function listarRespuestasEncuesta(encuestaId, filtros = {}) {
     if (!data || data.length === 0) break
 
     todas.push(...data)
-    if (data.length < PAGE_SIZE) break
-    desde += PAGE_SIZE
+    if (data.length < PAGE_SIZE_LISTAR) break
+    desde += PAGE_SIZE_LISTAR
   }
 
   return { data: todas, error: null }
